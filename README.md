@@ -183,8 +183,8 @@ All release assets are signed and verified. Grab the latest build from [GitHub R
 
 ## 👥 Authors & Co-Creators
 
-* **Fried ([@kburna243](https://github.com/kburna243))** – Core Development, Architecture & Android Engineering
-* **Mike** – Co-Creator, Concept & Testing
+* **Fried ([@kburna243](https://github.com/kburna243))** – Core Development, System Architecture, UI Design & Android Engineering
+* **Mike** – Co-Development, Architecture, UI Design, Concept & Testing
 
 ---
 
