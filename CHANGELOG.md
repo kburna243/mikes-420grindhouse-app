@@ -4,6 +4,21 @@ All notable changes to the **Mikes 420 Grindhouse App** suite are documented in 
 
 ---
 
+## [v1.7.0] - Build 38 (2026-08-23)
+### 🎬 Features & UI Polish
+- **Clean Title Recognition:** Now playing overlay displays cleanly formatted movie or series titles with seamless raw stream filename fallback.
+- **Scrollable EPG Queue:** Up-next queue list is now fully scrollable (up to 50 scheduled items) via TV remote D-Pad (▲ / ▼).
+- **Start Times & Cleaner Queue:** Removed numbered index prefixes (`1.`, `2.`, `3.`) from queue rows and quick HUD; displayed exact broadcast start times (e.g. `21:45`) instead.
+- **Facts Renaming:** Renamed movie metadata section from `"TRIVIA"` to `"ADDITIONAL FACTS"` / `"ZUSÄTZLICHE FAKTEN"`.
+
+---
+
+## [v1.6.8] - Build 36 (2026-08-21)
+### 🛠️ Fixed
+- **Seamless Stream Transitions:** Resolved video player getting stuck in a paused state when transitioning between YouTube interludes and live direct streams.
+
+---
+
 ## [v1.6.7] - Build 35 (2026-08-21)
 ### 🛠️ Fixed
 - **Video Freeze Resolution:** Eliminated recurring video freezes caused by repetitive hardware decoder flushes on Fire TV and Android TV devices.

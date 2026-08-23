@@ -167,8 +167,11 @@ fun MetadataOverlay(
                                 )
                             )
                             Spacer(modifier = Modifier.height(2.dp))
+                            val displayTitle = movieInfo?.title?.takeIf { it.isNotBlank() }
+                                ?: nowPlaying?.title
+                                ?: stringResource(R.string.no_media_queued)
                             Text(
-                                text = nowPlaying?.title ?: stringResource(R.string.no_media_queued),
+                                text = displayTitle,
                                 style = TextStyle(
                                     color = PureWhite,
                                     fontWeight = FontWeight.SemiBold,
@@ -277,23 +280,35 @@ fun MetadataOverlay(
                             }
                         }
 
-                        nextRows.forEachIndexed { index, row ->
+                        nextRows.forEach { row ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = "${index + 1}.",
-                                    style = TextStyle(
-                                        color = AccentLavender,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp,
-                                        fontFamily = FontFamily.Monospace
+                                if (row.startTime.isNotBlank()) {
+                                    Text(
+                                        text = row.startTime,
+                                        style = TextStyle(
+                                            color = AccentLavender,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp,
+                                            fontFamily = FontFamily.Monospace
+                                        )
                                     )
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                } else {
+                                    Text(
+                                        text = "•",
+                                        style = TextStyle(
+                                            color = AccentLavender,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp
+                                        )
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                }
                                 Text(
                                     text = row.title,
                                     style = TextStyle(

@@ -7,6 +7,8 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
@@ -27,10 +30,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -51,6 +60,8 @@ import com.example.ui.theme.SurfaceDark
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextSubtitleWhite
 import com.example.ui.theme.SurfaceCard
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun UpNextOverlay(
@@ -64,6 +75,28 @@ fun UpNextOverlay(
     isTv: Boolean = true,
     modifier: Modifier = Modifier
 ) {
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val listFocus = remember { FocusRequester() }
+
+    LaunchedEffect(isVisible) {
+        if (isVisible) {
+            listState.scrollToItem(0)
+            var placed = false
+            var attempts = 0
+            while (!placed && attempts < 10) {
+                delay(50)
+                placed = try {
+                    listFocus.requestFocus()
+                    true
+                } catch (_: Exception) {
+                    false
+                }
+                attempts++
+            }
+        }
+    }
+
     AnimatedVisibility(
         visible = isVisible,
         enter = fadeIn() + slideInHorizontally(initialOffsetX = { it }),
@@ -239,11 +272,26 @@ fun UpNextOverlay(
                         }
                     } else {
                         LazyColumn(
+                            state = listState,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)
+                                .focusRequester(listFocus)
+                                .focusable()
+                                .onKeyEvent { event ->
+                                    if (event.nativeKeyEvent.action != android.view.KeyEvent.ACTION_DOWN) {
+                                        return@onKeyEvent false
+                                    }
+                                    val step = when (event.nativeKeyEvent.keyCode) {
+                                        android.view.KeyEvent.KEYCODE_DPAD_DOWN -> 300f
+                                        android.view.KeyEvent.KEYCODE_DPAD_UP -> -300f
+                                        else -> return@onKeyEvent false
+                                    }
+                                    scope.launch { listState.animateScrollBy(step) }
+                                    true
+                                }
                         ) {
-                            itemsIndexed(queueItems.take(15)) { index, item ->
+                            itemsIndexed(queueItems.take(50)) { index, item ->
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -262,9 +310,9 @@ fun UpNextOverlay(
                                         modifier = Modifier.width(68.dp)
                                     )
 
-                                    // Title
+                                    // Title (No Numbering)
                                     Text(
-                                        text = "${index + 1}. ${item.title}",
+                                        text = item.title,
                                         style = TextStyle(
                                             color = TextSubtitleWhite,
                                             fontWeight = FontWeight.Normal,
