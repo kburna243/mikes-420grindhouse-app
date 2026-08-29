@@ -4,6 +4,15 @@ All notable changes to the **Mikes 420 Grindhouse App** suite are documented in 
 
 ---
 
+## [v1.8.0] - Build 39 (2026-08-29)
+### 💬 Subtitles & Closed Captioning (CC)
+- **Universal Subtitle Support:** Native parsing and rendering of CyTube subtitle tracks (`.vtt`, `.srt`, `.ass`, `.ttml`) for direct streams in ExoPlayer/Media3.
+- **Dedicated Subtitles Toggle:** Added persistent *Untertitel (CC)* / *Subtitles (CC)* switch under Playback settings (*Wiedergabe*) with state persistence across app restarts.
+- **High-Contrast TV & Mobile Styling:** Configured native `SubtitleView` with high-contrast white text, transparent background, and crisp black outline for optimal legibility on both TVs and mobile displays.
+- **Real-Time Stream Sync:** Dynamically switches ExoPlayer text tracks and YouTube CC policies without interrupting video or audio playback.
+
+---
+
 ## [v1.7.0] - Build 38 (2026-08-23)
 ### 🎬 Features & UI Polish
 - **Clean Title Recognition:** Now playing overlay displays cleanly formatted movie or series titles with seamless raw stream filename fallback.

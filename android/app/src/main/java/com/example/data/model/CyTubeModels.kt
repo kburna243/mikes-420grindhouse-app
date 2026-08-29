@@ -17,6 +17,14 @@ data class QueueScheduleItem(
     val mediaId: String = ""
 )
 
+data class SubtitleTrack(
+    val url: String,
+    val label: String = "English",
+    val language: String = "en",
+    val mimeType: String = "",
+    val isDefault: Boolean = true
+)
+
 data class MediaItem(
     val id: String,
     val title: String,
@@ -25,7 +33,8 @@ data class MediaItem(
     val url: String? = null,
     val currentTimeSeconds: Double = 0.0,
     val paused: Boolean = false,
-    val directUrl: String = ""
+    val directUrl: String = "",
+    val subtitleTracks: List<SubtitleTrack> = emptyList()
 ) {
     val isWebStream: Boolean
         get() {

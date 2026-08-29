@@ -17,6 +17,7 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.example.data.model.MediaItem
+import com.example.data.model.SubtitleTrack
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -29,6 +30,22 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "VideoPlayerManager"
 const val DEMO_FALLBACK_STREAM_URL = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+
+fun resolveSubtitleMimeType(url: String, contentType: String? = null): String {
+    val ct = contentType?.lowercase()?.trim().orEmpty()
+    val u = url.lowercase().trim()
+    return when {
+        ct == "text/vtt" || ct.contains("vtt") -> MimeTypes.TEXT_VTT
+        ct == "application/x-subrip" || ct == "text/srt" || ct.contains("subrip") -> MimeTypes.APPLICATION_SUBRIP
+        ct == "text/x-ssa" || ct.contains("ssa") || ct.contains("ass") -> MimeTypes.TEXT_SSA
+        ct == "application/ttml+xml" || ct.contains("ttml") -> MimeTypes.APPLICATION_TTML
+        u.contains(".vtt") -> MimeTypes.TEXT_VTT
+        u.contains(".srt") -> MimeTypes.APPLICATION_SUBRIP
+        u.contains(".ssa") || u.contains(".ass") -> MimeTypes.TEXT_SSA
+        u.contains(".ttml") || u.contains(".xml") -> MimeTypes.APPLICATION_TTML
+        else -> MimeTypes.TEXT_VTT
+    }
+}
 
 fun convertGoogleDriveUrl(url: String): String {
     if (url.contains("drive.google.com/file/d/")) {
@@ -101,6 +118,8 @@ class VideoPlayerManager(
     val isMuted: StateFlow<Boolean> = _isMuted.asStateFlow()
 
     private var currentStreamUrl: String? = null
+    private var currentSubtitleTracks: List<SubtitleTrack> = emptyList()
+    private var subtitlesEnabled = true
     private var reconnectJob: Job? = null
     private var reconnectAttempts = 0
     private var shouldPlayWhenReady = true
@@ -140,6 +159,10 @@ class VideoPlayerManager(
             .build().apply {
                 playWhenReady = shouldPlayWhenReady
                 repeatMode = Player.REPEAT_MODE_ALL
+                trackSelectionParameters = trackSelectionParameters
+                    .buildUpon()
+                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !subtitlesEnabled)
+                    .build()
 
                 addListener(object : Player.Listener {
                     override fun onIsPlayingChanged(playing: Boolean) {
@@ -186,11 +209,21 @@ class VideoPlayerManager(
             }
 
         currentStreamUrl?.let { url ->
-            loadStreamInternal(url, resumePosition = lastPlaybackPosition)
+            loadStreamInternal(url, resumePosition = lastPlaybackPosition, subtitleTracks = currentSubtitleTracks)
         }
     }
 
     fun getPlayer(): ExoPlayer? = exoPlayer
+
+    fun setSubtitlesEnabled(enabled: Boolean) {
+        subtitlesEnabled = enabled
+        exoPlayer?.let { player ->
+            player.trackSelectionParameters = player.trackSelectionParameters
+                .buildUpon()
+                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !enabled)
+                .build()
+        }
+    }
 
     /**
      * Sets and prepares media for playback based on CyTube MediaItem metadata or custom stream URLs.
@@ -203,6 +236,7 @@ class VideoPlayerManager(
         mediaLoadedTimestampMs = now
         lastSeekTimestampMs = now
         shouldPlayWhenReady = media?.paused != true
+        currentSubtitleTracks = media?.subtitleTracks ?: emptyList()
 
         if (media == null && customStreamUrl.isNullOrBlank()) {
             currentStreamUrl = null
@@ -243,7 +277,7 @@ class VideoPlayerManager(
             currentStreamUrl = streamUrl
             val mediaPos = media?.currentTimeSeconds ?: 0.0
             val initialSeek = (mediaPos + leadFor(mediaPos)) * 1000
-            loadStreamInternal(streamUrl, resumePosition = initialSeek.toLong())
+            loadStreamInternal(streamUrl, resumePosition = initialSeek.toLong(), subtitleTracks = currentSubtitleTracks)
         } else {
             Log.d(TAG, "No direct streamable URL for media: ${media?.title} (type: ${media?.type})")
             currentStreamUrl = null
@@ -256,9 +290,14 @@ class VideoPlayerManager(
     }
 
     /**
-     * Builds and sets the ExoPlayer MediaItem with MIME-type inference (HLS, DASH, MP4, WebM, MKV).
+     * Builds and sets the ExoPlayer MediaItem with MIME-type inference (HLS, DASH, MP4, WebM, MKV)
+     * and attaches any external subtitle tracks (VTT, SRT, SSA, TTML).
      */
-    private fun loadStreamInternal(url: String, resumePosition: Long = 0L) {
+    private fun loadStreamInternal(
+        url: String,
+        resumePosition: Long = 0L,
+        subtitleTracks: List<SubtitleTrack> = emptyList()
+    ) {
         val player = exoPlayer ?: return
 
         try {
@@ -282,6 +321,23 @@ class VideoPlayerManager(
                 lowerUrl.endsWith(".mkv") -> {
                     builder.setMimeType(MimeTypes.VIDEO_MATROSKA)
                 }
+            }
+
+            val subtitleConfigs = subtitleTracks.mapNotNull { track ->
+                if (track.url.isBlank()) null
+                else {
+                    val mime = resolveSubtitleMimeType(track.url, track.mimeType)
+                    ExoMediaItem.SubtitleConfiguration.Builder(Uri.parse(track.url))
+                        .setMimeType(mime)
+                        .setLanguage(track.language.ifBlank { "en" })
+                        .setLabel(track.label.ifBlank { "Subtitles" })
+                        .setSelectionFlags(if (track.isDefault) C.SELECTION_FLAG_DEFAULT else 0)
+                        .build()
+                }
+            }
+            if (subtitleConfigs.isNotEmpty()) {
+                builder.setSubtitleConfigurations(subtitleConfigs)
+                Log.d(TAG, "Attached ${subtitleConfigs.size} subtitle track(s) to stream: ${subtitleConfigs.map { it.uri }}")
             }
 
             val exoMediaItem = builder.build()
@@ -427,7 +483,7 @@ class VideoPlayerManager(
 
     fun retry() {
         reconnectAttempts = 0
-        currentStreamUrl?.let { loadStreamInternal(it) } ?: playDemoStream()
+        currentStreamUrl?.let { loadStreamInternal(it, subtitleTracks = currentSubtitleTracks) } ?: playDemoStream()
     }
 
     private fun handlePlaybackError(error: PlaybackException) {

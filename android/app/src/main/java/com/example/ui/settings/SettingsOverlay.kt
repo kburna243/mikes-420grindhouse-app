@@ -339,7 +339,7 @@ fun SettingsOverlay(
 
                             item { SectionHeading(stringResource(R.string.section_playback)) }
 
-                            // 3. YouTube Subtitles (CC)
+                            // Subtitles (CC) Toggle
                             item {
                                 FocusableSettingsItem(
                                     title = stringResource(R.string.settings_subtitles),
@@ -352,19 +352,7 @@ fun SettingsOverlay(
                                             up = closeButtonFocusRequester
                                         }
                                 ) {
-                                    Surface(
-                                        color = if (settings.subtitlesEnabled) AccentIceBlue else SurfaceDark,
-                                        shape = RoundedCornerShape(8.dp),
-                                        border = if (settings.subtitlesEnabled) null else BorderStroke(1.dp, SubtleBorder)
-                                    ) {
-                                        Text(
-                                            text = if (settings.subtitlesEnabled) stringResource(R.string.settings_chat_active) else stringResource(R.string.settings_chat_off),
-                                            color = if (settings.subtitlesEnabled) Color.Black else TextMuted,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 12.sp,
-                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
-                                        )
-                                    }
+                                    StatePill(active = settings.subtitlesEnabled)
                                 }
                             }
 

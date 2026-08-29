@@ -10,6 +10,7 @@ import com.example.data.model.LoginState
 import com.example.data.model.ConnectionStatus
 import com.example.data.model.MediaItem
 import com.example.data.model.MediaSyncUpdate
+import com.example.data.model.SubtitleTrack
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -459,6 +460,7 @@ class CyTubeSocketClient(
         val currentTime = data.optDouble("currentTime", data.optDouble("time", 0.0))
         val paused = data.optBoolean("paused", false)
         val directUrl = parseDirectUrlFromData(data)
+        val subtitleTracks = parseSubtitleTracksFromData(data)
 
         val item = MediaItem(
             id = id,
@@ -468,13 +470,14 @@ class CyTubeSocketClient(
             url = directUrl.ifBlank { if (id.startsWith("http")) id else null },
             currentTimeSeconds = currentTime,
             paused = paused,
-            directUrl = directUrl
+            directUrl = directUrl,
+            subtitleTracks = subtitleTracks
         )
 
         val previous = _nowPlaying.value
         val isRealChange = previous == null || previous.id != id || previous.title != title
 
-        Log.d(TAG, "Media changed: '$title' (type: $type, id: $id, direct: $directUrl)")
+        Log.d(TAG, "Media changed: '$title' (type: $type, id: $id, direct: $directUrl, subtitles: ${subtitleTracks.size})")
         _nowPlaying.value = item
         if (isRealChange) {
             _mediaChangedEvent.tryEmit(item)
@@ -516,9 +519,10 @@ class CyTubeSocketClient(
                 val mediaId = mediaObj.optString("id", "")
                 val uid = entry?.optString("uid", "") ?: ""
                 val id = mediaId.ifBlank { uid.ifBlank { i.toString() } }
-                val title = mediaObj.optString("title", entry?.optString("title", "Upcoming Video"))
+                val title = mediaObj.optString("title").ifBlank { entry?.optString("title", "Upcoming Video") ?: "Upcoming Video" }
                 val type = mediaObj.optString("type", "raw")
                 val direct = parseDirectUrlFromData(mediaObj)
+                val subtitleTracks = parseSubtitleTracksFromData(mediaObj)
                 items.add(
                     MediaItem(
                         id = id,
@@ -526,7 +530,8 @@ class CyTubeSocketClient(
                         durationSeconds = mediaObj.optDouble("seconds", mediaObj.optDouble("duration", 0.0)),
                         type = type,
                         url = direct.ifBlank { if (id.startsWith("http")) id else null },
-                        directUrl = direct
+                        directUrl = direct,
+                        subtitleTracks = subtitleTracks
                     )
                 )
             }
@@ -543,13 +548,15 @@ class CyTubeSocketClient(
             val id = mediaObj.optString("id", "")
             val type = mediaObj.optString("type", "raw")
             val direct = parseDirectUrlFromData(mediaObj)
+            val subtitleTracks = parseSubtitleTracksFromData(mediaObj)
             val newMedia = MediaItem(
                 id = id,
                 title = mediaObj.optString("title", "Queued Media"),
                 durationSeconds = mediaObj.optDouble("seconds", mediaObj.optDouble("duration", 0.0)),
                 type = type,
                 url = direct.ifBlank { if (id.startsWith("http")) id else null },
-                directUrl = direct
+                directUrl = direct,
+                subtitleTracks = subtitleTracks
             )
             cachedPlaylist.add(newMedia)
             updateUpNextList()
@@ -582,6 +589,41 @@ class CyTubeSocketClient(
         } else {
             _upNext.value = emptyList()
         }
+    }
+
+    private fun parseSubtitleTracksFromData(data: JSONObject): List<SubtitleTrack> {
+        val tracks = mutableListOf<SubtitleTrack>()
+        val meta = data.optJSONObject("meta")
+        val candidateArrays = listOfNotNull(
+            meta?.optJSONArray("textTracks"),
+            meta?.optJSONArray("subtitles"),
+            meta?.optJSONArray("captions"),
+            data.optJSONArray("textTracks"),
+            data.optJSONArray("subtitles")
+        )
+
+        for (arr in candidateArrays) {
+            for (i in 0 until arr.length()) {
+                val obj = arr.optJSONObject(i) ?: continue
+                val rawUrl = obj.optString("url", obj.optString("link", obj.optString("src", ""))).trim()
+                if (rawUrl.isEmpty() || !rawUrl.startsWith("http")) continue
+                val label = obj.optString("name", obj.optString("label", obj.optString("title", "English"))).trim()
+                val lang = obj.optString("language", obj.optString("lang", "en")).trim()
+                val contentType = obj.optString("contentType", obj.optString("type", "")).trim()
+                val isDefault = obj.optBoolean("default", true)
+
+                tracks.add(
+                    SubtitleTrack(
+                        url = rawUrl,
+                        label = label.ifBlank { "English" },
+                        language = lang.ifBlank { "en" },
+                        mimeType = contentType,
+                        isDefault = isDefault
+                    )
+                )
+            }
+        }
+        return tracks.distinctBy { it.url }
     }
 
     private fun parseDirectUrlFromData(data: JSONObject): String {

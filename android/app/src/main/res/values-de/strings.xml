@@ -64,8 +64,8 @@
     <string name="remote_hint_menu">☰ Einstellungen</string>
     <string name="settings_chat_lines">Chat-Zeilen</string>
     <string name="settings_chat_lines_unit">Zeile</string>
-    <string name="settings_subtitles">YouTube-Untertitel</string>
-    <string name="settings_subtitles_on">Untertitel aktiviert (DE/EN)</string>
+    <string name="settings_subtitles">Untertitel (CC)</string>
+    <string name="settings_subtitles_on">Untertitel aktiviert</string>
     <string name="settings_subtitles_off">Untertitel deaktiviert</string>
     <string name="settings_chat_duration">Chat-Einblenddauer</string>
     <string name="settings_chat_duration_hides">Blendet nach %1$ds aus</string>

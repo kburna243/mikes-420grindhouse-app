@@ -63,7 +63,7 @@
     <string name="remote_hint_menu">☰ Settings</string>
     <string name="settings_chat_lines">Chat Lines</string>
     <string name="settings_chat_lines_unit">Line</string>
-    <string name="settings_subtitles">YouTube Subtitles (CC)</string>
+    <string name="settings_subtitles">Subtitles (CC)</string>
     <string name="settings_subtitles_on">Subtitles enabled</string>
     <string name="settings_subtitles_off">Subtitles disabled</string>
     <string name="settings_chat_duration">Chat Display Duration</string>

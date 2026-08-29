@@ -213,6 +213,14 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
         // Initial auto-hide timer for Remote Hints (6s on startup)
         scheduleRemoteHintsHide(6000L)
+
+        // Untertitel-Einstellung an ExoPlayer weitergeben
+        playerManager.setSubtitlesEnabled(settings.value.subtitlesEnabled)
+        viewModelScope.launch {
+            settings.collect { s ->
+                playerManager.setSubtitlesEnabled(s.subtitlesEnabled)
+            }
+        }
     }
 
     fun getExoPlayer(): ExoPlayer? = playerManager.getPlayer()

@@ -34,6 +34,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.PlayerView
 import com.example.data.model.MediaItem
 import com.example.data.model.MediaSyncUpdate
@@ -226,6 +227,7 @@ fun VideoPlayerSurface(
                 )
             }
         } else {
+            val isTv = remember { context.packageManager.hasSystemFeature("android.software.leanback") }
             val playerView = remember {
                 PlayerView(context).apply {
                     layoutParams = FrameLayout.LayoutParams(
@@ -236,6 +238,20 @@ fun VideoPlayerSurface(
                     resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                     keepScreenOn = true
                     setBackgroundColor(android.graphics.Color.BLACK)
+
+                    subtitleView?.apply {
+                        val captionStyle = CaptionStyleCompat(
+                            android.graphics.Color.WHITE,
+                            android.graphics.Color.TRANSPARENT,
+                            android.graphics.Color.TRANSPARENT,
+                            CaptionStyleCompat.EDGE_TYPE_OUTLINE,
+                            android.graphics.Color.BLACK,
+                            android.graphics.Typeface.SANS_SERIF
+                        )
+                        setStyle(captionStyle)
+                        setFixedTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, if (isTv) 22f else 16f)
+                        setBottomPaddingFraction(if (isTv) 0.08f else 0.06f)
+                    }
                 }
             }
 
